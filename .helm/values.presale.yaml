@@ -1,0 +1,37 @@
+extraction:
+  image:
+    path: "/deps-presale-x01/deps-extraction"
+  resources: {}
+
+extraction_settings:
+  ENV: presale
+
+  EXTERNAL_URL: "https://presale-host"
+
+  LOG_LEVEL: "INFO"
+
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+
+extraction_consumer:
+  image:
+    path: "/deps-presale-x01/deps-extraction"
+    pullPolicy: Always
+
+migrator:
+  image:
+    path: "/deps-presale-x01/deps-extraction-migrator"
+    pullPolicy: Always
+
+migration_settings:
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+
+helm:
+  enabled: false
+
+csi:
+  vault_namespace: 'k8s-presale'
+  roleName: 'k8s-presale'
+  vaultKubernetesMountPath: 'kubernetes-presale'
+
+service_account:
+  serviceAccountName: 'deps-presale'

@@ -1,0 +1,3 @@
+__all__ = ["DEFAULT_FIELD_ORDER"]
+
+DEFAULT_FIELD_ORDER = 0

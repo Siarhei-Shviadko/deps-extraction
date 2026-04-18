@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Raman Salauyou
+      changes:
+        - dropTable:
+            tableName: test
+      rollback:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: test_pkey
+                  name: pk
+                  type: VARCHAR(50)
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+            tableName: test
+
+  - changeSet:
+      id: 2
+      author: Raman Salauyou
+      changes:
+        - createTable:
+            tableName: extracted_field
+            columns:
+              - column:
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: document_id_field_code_index_pk
+                  name: document_id
+                  type: INTEGER
+              - column:
+                  constraints:
+                    primaryKey: true
+                  name: field_code
+                  type: VARCHAR
+              - column:
+                  constraints:
+                    primaryKey: true
+                  name: index
+                  type: VARCHAR
+              - column:
+                  name: value
+                  type: VARCHAR
+              - column:
+                  name: confidence
+                  type: FLOAT
+              - column:
+                  name: source_bbox_coordinates
+                  type: JSONB
+              - column:
+                  name: source_table_coordinates
+                  type: JSONB
+              - column:
+                  name: source_text_coordinates
+                  type: JSONB
+              - column:
+                  name: field_type
+                  type: VARCHAR
+              - column:
+                  name: meta
+                  type: JSONB
+      rollback:
+        - dropTable:
+            tableName: extracted_field

@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Illia Makarov
+      changes:
+        - addColumn:
+            tableName: document_type
+            columns:
+            - column:
+                name: compliance_policies
+                type: JSONB
+                constraints:
+                  nullable: true
+      rollback:
+        - dropColumn:
+            columnName: compliance_policies
+            tableName: document_type
+  - changeSet:
+      id: 2
+      author: Illia Makarov
+      changes:
+        - sql:
+            sql: delete from document_type

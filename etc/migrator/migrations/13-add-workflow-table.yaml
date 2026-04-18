@@ -1,0 +1,33 @@
+databaseChangeLog:
+
+- changeSet:
+    id: 1
+    author: Siarhei Shveadko
+    changes:
+    - createTable:
+        tableName: extraction_workflow
+        columns:
+        - column:
+            name: id
+            type: VARCHAR
+            constraints:
+              primaryKey: true
+        - column:
+            name: document_id
+            type: VARCHAR
+            constraints:
+              nullable: false        
+        - column:
+            name: steps
+            type: JSONB
+            constraints:
+              nullable: false
+        - column:
+            name: current_step_index
+            type: INTEGER
+            constraints:
+              nullable: false        
+
+    rollback:
+    - dropTable:
+        tableName: extraction_workflow

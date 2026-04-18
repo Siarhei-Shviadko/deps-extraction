@@ -1,0 +1,73 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Raman Salauyou
+      changes:
+        - sql:
+            sql: delete from document_type
+        - addColumn:
+            tableName: document_type
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(250)
+              - column:
+                  constraints:
+                    nullable: true
+                  name: extractor_type
+                  type: VARCHAR(100)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: fields
+                  type: JSONB
+              - column:
+                  constraints:
+                    nullable: false
+                  name: prompts
+                  type: JSONB
+        - renameColumn:
+            newColumnName: tenant_id
+            oldColumnName: tenant
+            tableName: document_type
+        - dropColumn:
+            columnName: command_channel
+            tableName: document_type
+        - addUniqueConstraint:
+            columnNames: id, tenant_id
+            constraintName: id_tenant_id_uc
+            tableName: document_type
+
+      rollback:
+        - dropUniqueConstraint:
+            constraintName: id_tenant_id_uc
+            tableName: document_type
+            uniqueColumns: id, tenant_id
+        - addColumn:
+            tableName: document_type
+            columns:
+              - column:
+                  constraints:
+                    nullable: true
+                  name: command_channel
+                  type: VARCHAR(150)
+        - sql:
+            sql: UPDATE document_type SET command_channel = name || '-' || tenant_id
+        - dropColumn:
+            columnName: name
+            tableName: document_type
+        - dropColumn:
+            columnName: extractor_type
+            tableName: document_type
+        - dropColumn:
+            columnName: fields
+            tableName: document_type
+        - dropColumn:
+            columnName: prompts
+            tableName: document_type
+        - renameColumn:
+            newColumnName: tenant
+            oldColumnName: tenant_id
+            tableName: document_type

@@ -1,0 +1,16 @@
+databaseChangeLog:
+- changeSet:
+    id: 1
+    author: Siarhei Shveadko
+    changes:
+    - addColumn:
+        tableName: extracted_field
+        columns:
+        - column:
+            name: table_cell_coordinates
+            type: JSONB     
+    rollback:
+      - dropColumn:
+          columnName: table_cell_coordinates
+          tableName: extracted_field   
+ 

@@ -1,0 +1,26 @@
+extraction:
+  image:
+    path: "/deps-platform/deps-extraction"
+  resources: {}
+
+extraction_settings:
+  ENV: other
+  EXTERNAL_URL: "https://other-host"
+
+  LOG_LEVEL: "INFO"
+
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+
+extraction_consumer:
+  image:
+    path: "/deps-platform/deps-extraction"
+
+migrator:
+  image:
+    path: "/deps-platform/deps-extraction-migrator"
+
+migration_settings:
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+
+helm:
+  enabled: false

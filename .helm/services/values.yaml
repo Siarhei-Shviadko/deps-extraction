@@ -1,0 +1,354 @@
+secrets:
+  common_secret:
+    secretName: common-secret
+  rabbitmq_password:
+    secretName: rabbitmq-password
+  security_certs:
+    secretName: security-certs
+  keycloak_certs_endpoint:
+    secretName: keycloak-certs-endpoint
+  extraction_database:
+    secretName: extraction-database
+  kafka_secrets:
+    secretName: kafka-secrets
+  default_extraction_command_channel:
+    secretName: default-extraction-command-channel
+  database_ssl_secret:
+    secretName: database-ssl-secret
+  deps_extraction:
+    secretName: deps-extraction
+  telemetry_secrets:
+    secretName: telemetry-secrets
+
+helm_logs_job:
+  serviceAccountName: gitlab-ci
+  image:
+    path: "/base/kubernetes-helm"
+    pullPolicy: IfNotPresent
+    tag: "0.1.1"
+  resources: {}
+
+registry: ""
+env: ""
+
+extraction:
+  replicaCount: 1
+  image:
+    path: "/deps-dev-x01/deps-extraction"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: artifactory
+  service:
+    type: ClusterIP
+    port: 8000
+  resources: {}
+  #    limits:
+  #      cpu: 200m
+  #      memory: 800Mi
+  #    requests:
+  #      cpu: 100m
+  #      memory: 350Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+extraction_consumer:
+  replicaCount: 1
+  image:
+    path: '/deps-dev-x01/deps-extraction'
+    pullPolicy: IfNotPresent
+    tag: ''
+  imagePullSecrets: artifactory
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+migrator:
+  image:
+    path: "/deps-dev-x01/deps-extraction-migrator"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: artifactory
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+certs_location:
+  certs_default_path: "/tmp/ssl"
+
+  database_sslcerts_path: "/home/dbcerts"
+
+extraction_settings:
+  ENV: dev
+
+  DATABASE_PORT: '5432'
+  DATABASE_DRIVER: psycopg2
+  DATABASE_DIALECT: postgresql
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+  DATABASE_SSLKEY_PATH: "/home/dbcerts/tls.key"
+  DATABASE_SSLCERT_PATH: "/home/dbcerts/tls.crt"
+  DATABASE_SSLROOTCERT_PATH: "/home/dbcerts/root.crt"
+
+  AUTH_VERIFY_SSL: false
+
+  LOG_LEVEL: "INFO"
+  DOCUMENTATION_ENABLED: "true"
+
+  RABBITMQ_TLS_ENABLED: false
+
+  AI_FUSION_URL: 'http://ai-fusion:8000'
+  DOCUMENT_TYPE_URL: 'http://document-type:8000'
+
+  KAFKA_GROUP_ID: extraction
+  KAFKA_AUTO_OFFSET_RESET: earliest
+  KAFKA_SECURITY_ENABLED: false
+
+  # Azure Service Bus
+  ASB_SUBSCRIPTION_STRATEGY: 'no_preparation'
+  ASB_TOPIC_NAME: 'deps-topic'
+  message_broker_asb_without_manage_permission: false
+
+  # Telemetry
+  INSTRUMENTATION_ENABLED: false
+  SERVICE_NAME: deps-extraction
+  EXPORTER_TYPE: azure
+
+  LLM_EXTRACTION_GROUPING_FACTOR: 5
+
+  EXTRACTION_WORKFLOW_ENABLED: true
+
+migration_settings:
+  DATABASE_PORT: '5432'
+
+helm:
+  enabled: false
+
+csi:
+  csi_default_name: deps-extraction
+  vault_namespace: 'k8s-dev'
+  roleName: 'k8s-dev'
+  vaultKubernetesMountPath: 'kubernetes-dev'
+
+secrets_location:
+  secrets_default_path: "/mnt/secrets-store"
+
+service_account:
+  serviceAccountName: 'deps-develop'
+
+secret_project_id:
+  id: ""
+
+azure_kv_settings:
+  keyvaultName: ""
+  tenantId: ""
+  userAssignedIdentityID: ""
+  resourceGroup: ""
+  subscriptionId: ""
+
+vault_settings:
+  enabled: false
+  hashicorp_vault: false
+  azure_key_vault: false
+  gcp_secret_manager: false
+  aws_secret_manager: false
+  aws_secret_manager_region: ''
+
+extraction_consumer_vault_enabled:
+  env:
+  - name: DATABASE_HOST
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: db-host
+  - name: DATABASE_DB
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: extraction-db
+  - name: DATABASE_USER
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: extraction-db-user
+  - name: DATABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: extraction-db-password
+  - name: AUTH_CERTS_ENDPOINT
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: keycloak-certs-endpoint
+  - name: AUTH_ENABLED
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: auth-enabled
+  - name: MESSAGING_DRIVER
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: message-broker-driver
+  - name: MESSAGE_BROKER_CONNECTION_STRING
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: message-broker-connection-string
+  - name: DEFAULT_COMMAND_CHANNEL
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: default-command-channel
+
+extraction_consumer_vault_disabled:
+  env:
+  - name: DATABASE_HOST
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: database-host
+  - name: DATABASE_DB
+    valueFrom:
+      secretKeyRef:
+        name: extraction-database
+        key: database-db
+  - name: DATABASE_USER
+    valueFrom:
+      secretKeyRef:
+        name: extraction-database
+        key: user
+  - name: DATABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: extraction-database
+        key: password
+  - name: AUTH_CERTS_ENDPOINT
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: keycloak-certs-endpoint
+  - name: AUTH_ENABLED
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: auth-enabled
+  - name: MESSAGING_DRIVER
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: message-broker-driver
+  - name: MESSAGE_BROKER_CONNECTION_STRING
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: message-broker-connection-string
+  - name: DEFAULT_COMMAND_CHANNEL
+    valueFrom:
+      secretKeyRef:
+        name: default-extraction-command-channel
+        key: default-command-channel
+
+extraction_vault_enabled:
+  env:
+  - name: AUTH_ENABLED
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: auth-enabled
+  - name: AUTH_CERTS_ENDPOINT
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: keycloak-certs-endpoint
+  - name: MESSAGING_DRIVER
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: message-broker-driver
+  - name: MESSAGE_BROKER_CONNECTION_STRING
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: message-broker-connection-string
+  - name: DATABASE_HOST
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: db-host
+  - name: DATABASE_DB
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: extraction-db
+  - name: DATABASE_USER
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: extraction-db-user
+  - name: DATABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: extraction-db-password
+  - name: DEFAULT_COMMAND_CHANNEL
+    valueFrom:
+      secretKeyRef:
+        name: deps-extraction
+        key: default-command-channel
+
+extraction_vault_disabled:
+  env:
+  - name: AUTH_ENABLED
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: auth-enabled
+  - name: AUTH_CERTS_ENDPOINT
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: keycloak-certs-endpoint
+  - name: MESSAGING_DRIVER
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: message-broker-driver
+  - name: MESSAGE_BROKER_CONNECTION_STRING
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: message-broker-connection-string
+  - name: DATABASE_HOST
+    valueFrom:
+      secretKeyRef:
+        name: common-secret
+        key: database-host
+  - name: DATABASE_DB
+    valueFrom:
+      secretKeyRef:
+        name: extraction-database
+        key: database-db
+  - name: DATABASE_USER
+    valueFrom:
+      secretKeyRef:
+        name: extraction-database
+        key: user
+  - name: DATABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: extraction-database
+        key: password
+  - name: DEFAULT_COMMAND_CHANNEL
+    valueFrom:
+      secretKeyRef:
+        name: default-extraction-command-channel
+        key: default-command-channel

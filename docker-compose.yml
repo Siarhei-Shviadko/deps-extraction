@@ -1,0 +1,16 @@
+version: "3.4"
+
+services:
+  api:
+    image: "extraction-dev"
+    container_name: "deps-extraction"
+    command: python -m deps_extraction serve
+
+  consumer:
+    image: "extraction-dev"
+    container_name: "deps-extraction-consumer"
+    command: python -m deps_extraction dispatch
+
+  migrator:
+    image: "extraction-migrator"
+    container_name: deps-extraction-migrator

@@ -1,0 +1,26 @@
+databaseChangeLog:
+- changeSet:
+    id: 1
+    author: Palina Pashkouskaya
+    changes:
+    - createTable:
+        tableName: document_type
+        columns:
+        - column:
+            constraints:
+                primaryKey: true
+                primaryKeyName: document_type_id
+            name: id
+            type: VARCHAR(150)
+        - column:
+            constraints:
+                nullable: false
+            name: tenant
+            type: VARCHAR(150)
+        - column:
+            name: command_channel
+            type: VARCHAR(150)
+
+    rollback:
+        - dropTable:
+              - tableName: document_type

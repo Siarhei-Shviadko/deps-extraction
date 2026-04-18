@@ -1,0 +1,30 @@
+databaseChangeLog:
+- changeSet:
+    id: 1
+    author: Siarhei Shveadko
+    changes:
+    - createTable:
+        columns:
+        - column:
+            name: tenant_id
+            type: VARCHAR
+        - column:
+            name: document_id
+            type: INTEGER
+        tableName: tenant_documents
+    rollback:
+      - dropTable:
+        tableName: tenant_documents
+
+- changeSet:
+    id: 2
+    author: Siarhei Shveadko
+    changes:
+    - addUniqueConstraint:
+        columnNames: tenant_id, document_id
+        constraintName: unique_tenant_id_document_id
+        tableName: tenant_documents
+    rollback:
+    - dropUniqueConstraint:
+        constraintName: unique_tenant_id_document_id
+        tableName: tenant_documents

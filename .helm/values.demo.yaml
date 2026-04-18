@@ -1,0 +1,34 @@
+extraction:
+  image:
+    path: "/deps-platform/deps-extraction"
+  resources: {}
+
+extraction_settings:
+  ENV: demo
+  EXTERNAL_URL: "https://demo-host"
+
+  LOG_LEVEL: "INFO"
+
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+
+extraction_consumer:
+  image:
+    path: "/deps-platform/deps-extraction"
+
+migrator:
+  image:
+    path: "/deps-platform/deps-extraction-migrator"
+
+migration_settings:
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+
+helm:
+  enabled: false
+
+csi:
+  vault_namespace: 'k8s-demo'
+  roleName: 'k8s-demo'
+  vaultKubernetesMountPath: 'kubernetes-demo'
+
+service_account:
+  serviceAccountName: 'deps-demo'

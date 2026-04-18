@@ -1,0 +1,41 @@
+extraction:
+  image:
+    path: "/deps-platform/deps-extraction"
+  resources: {}
+#    limits:
+#      cpu:
+#      memory:
+#    requests:
+#      cpu:
+#      memory:
+
+
+extraction_settings:
+  ENV: ins
+  EXTERNAL_URL: "https://ins-host"
+
+  LOG_LEVEL: "INFO"
+
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+
+extraction_consumer:
+  image:
+    path: "/deps-platform/deps-extraction"
+
+migrator:
+  image:
+    path: "/deps-platform/deps-extraction-migrator"
+
+migration_settings:
+  DATABASE_REQUIRE_SECURE_TRANSPORT: false
+
+helm:
+  enabled: false
+
+csi:
+  vault_namespace: 'k8s-ins'
+  roleName: 'k8s-ins'
+  vaultKubernetesMountPath: 'kubernetes-ins'
+
+service_account:
+  serviceAccountName: 'deps-insurance'

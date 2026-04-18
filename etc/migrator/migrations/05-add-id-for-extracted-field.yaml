@@ -1,0 +1,35 @@
+databaseChangeLog:
+- changeSet:
+    id: 1
+    author: Siarhei Shveadko
+    changes:
+    - createTable:
+        tableName: groups
+        columns:
+        - column:
+            constraints:
+              primaryKey: true
+              primaryKeyName: document_id__pk
+            name: document_id
+            type: INTEGER
+        - column:
+            name: groups
+            type: JSONB
+    rollback:
+      - dropTable:
+          tableName: groups
+
+- changeSet:
+    id: 2
+    author: Siarhei Shveadko
+    changes:
+    - addColumn:
+        tableName: extracted_field
+        columns:
+        - column:
+            name: id
+            type: VARCHAR(150)     
+    rollback:
+      - dropColumn:
+          columnName: id
+          tableName: extracted_field       

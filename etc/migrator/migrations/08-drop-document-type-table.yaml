@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Alina Izvozchikova
+      changes:
+        - sql:
+            sql: delete from document_type

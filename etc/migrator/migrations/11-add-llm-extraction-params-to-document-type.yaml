@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Oleksandr Rez
+      changes:
+        - addColumn:
+            tableName: document_type
+            columns:
+            - column:
+                name: llm_extraction_params
+                type: JSONB
+                constraints:
+                  nullable: true
+      rollback:
+        - dropColumn:
+            columnName: llm_extraction_params
+            tableName: document_type

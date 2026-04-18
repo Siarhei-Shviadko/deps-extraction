@@ -1,0 +1,379 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Siarhei Shveadko
+      changes:
+        - addColumn:
+            tableName: document_type
+            columns:
+            - column:
+                name: extractors
+                type: JSONB
+                constraints:
+                  defaultValue: '[]'    
+      rollback:
+        - dropColumn:
+            tableName: document_type
+            columnName: extractors        
+
+  - changeSet:
+      id: 2
+      author: Siarhei Shveadko
+      changes:
+        - sql:
+            splitStatements: true
+            stripComments: true
+            sql: |
+              -- Step 1: Handle rows with extractor_type = 'non' and empty fields
+              UPDATE DOCUMENT_TYPE
+              SET
+                EXTRACTORS = '[]'::JSONB
+              WHERE
+                EXTRACTOR_TYPE = 'non'
+                AND FIELDS = '[]'::JSONB;
+
+              -- Step 2: Handle rows with extractor_type = 'non' and non-empty fields
+              WITH
+                NON_EXTRACTOR_DATA AS (
+                  SELECT
+                    DOC.ID AS DOCUMENT_TYPE_ID,
+                    COALESCE(
+                      JSONB_AGG(FIELD) FILTER (WHERE FIELD IS NOT NULL),
+                      '[]'::JSONB
+                    ) AS AGGREGATED_FIELDS,
+                    COALESCE(
+                      JSONB_AGG(
+                        (
+                          SELECT
+                            PROMPT
+                          FROM
+                            JSONB_ARRAY_ELEMENTS(DOC.PROMPTS) AS PROMPT
+                          WHERE
+                            PROMPT ->> 'code' = FIELD ->> 'code'
+                        )
+                      ) FILTER (WHERE FIELD IS NOT NULL),
+                      '[]'::JSONB
+                    ) AS AGGREGATED_PROMPTS,
+                    COALESCE(
+                      JSONB_AGG(
+                        (
+                          SELECT
+                            POLICY
+                          FROM
+                            JSONB_ARRAY_ELEMENTS(DOC.COMPLIANCE_POLICIES) AS POLICY
+                          WHERE
+                            POLICY ->> 'code' = FIELD ->> 'code'
+                        )
+                      ) FILTER (WHERE FIELD IS NOT NULL),
+                      '[]'::JSONB
+                    ) AS AGGREGATED_COMPLIANCE_POLICIES
+                  FROM
+                    DOCUMENT_TYPE DOC
+                    LEFT JOIN LATERAL JSONB_ARRAY_ELEMENTS(DOC.FIELDS) AS FIELD ON TRUE
+                  WHERE
+                    DOC.EXTRACTOR_TYPE = 'non'
+                    AND FIELDS != '[]'::JSONB
+                  GROUP BY
+                    DOC.ID
+                )
+              UPDATE DOCUMENT_TYPE
+              SET
+                EXTRACTORS = COALESCE(
+                  (
+                    SELECT
+                      JSONB_AGG(
+                        JSONB_BUILD_OBJECT(
+                          'id',
+                          MD5(DOCUMENT_TYPE.ID || '_llm')::UUID,
+                          'type',
+                          'llm',
+                          'fields',
+                          NON_EXTRACTOR_DATA.AGGREGATED_FIELDS,
+                          'prompts',
+                          NON_EXTRACTOR_DATA.AGGREGATED_PROMPTS,
+                          'compliance_policies',
+                          NON_EXTRACTOR_DATA.AGGREGATED_COMPLIANCE_POLICIES
+                        )
+                      )
+                    FROM
+                      NON_EXTRACTOR_DATA
+                    WHERE
+                      NON_EXTRACTOR_DATA.DOCUMENT_TYPE_ID = DOCUMENT_TYPE.ID
+                  ),
+                  '[]'::JSONB
+                )
+              WHERE
+                DOCUMENT_TYPE.EXTRACTOR_TYPE = 'non'
+                AND FIELDS != '[]'::JSONB;
+
+              -- Step 3: Handle rows with other extractor types
+              WITH
+                NATIVE_EXTRACTOR_DATA AS (
+                  SELECT
+                    DOC.ID AS DOCUMENT_TYPE_ID,
+                    COALESCE(
+                      JSONB_AGG(FIELD) FILTER (
+                        WHERE
+                          FIELD IS NOT NULL
+                          AND NOT EXISTS (
+                            SELECT
+                              1
+                            FROM
+                              JSONB_ARRAY_ELEMENTS(DOC.PROMPTS) AS PROMPT
+                            WHERE
+                              PROMPT ->> 'code' = FIELD ->> 'code'
+                          )
+                      ),
+                      '[]'::JSONB
+                    ) AS AGGREGATED_FIELDS,
+                    COALESCE(
+                      JSONB_AGG(
+                        (
+                          SELECT
+                            POLICY
+                          FROM
+                            JSONB_ARRAY_ELEMENTS(DOC.COMPLIANCE_POLICIES) AS POLICY
+                          WHERE
+                            POLICY ->> 'code' = FIELD ->> 'code'
+                        )
+                      ) FILTER (
+                        WHERE
+                          FIELD IS NOT NULL
+                          AND NOT EXISTS (
+                            SELECT
+                              1
+                            FROM
+                              JSONB_ARRAY_ELEMENTS(DOC.PROMPTS) AS PROMPT
+                            WHERE
+                              PROMPT ->> 'code' = FIELD ->> 'code'
+                          )
+                      ),
+                      '[]'::JSONB
+                    ) AS AGGREGATED_COMPLIANCE_POLICIES
+                  FROM
+                    DOCUMENT_TYPE DOC
+                    LEFT JOIN LATERAL JSONB_ARRAY_ELEMENTS(DOC.FIELDS) AS FIELD ON TRUE
+                  WHERE
+                    DOC.EXTRACTOR_TYPE IS NOT NULL
+                    AND DOC.EXTRACTOR_TYPE != 'non'
+                  GROUP BY
+                    DOC.ID
+                )
+              UPDATE DOCUMENT_TYPE
+              SET
+                EXTRACTORS = COALESCE(
+                  (
+                    SELECT
+                      JSONB_AGG(
+                        JSONB_BUILD_OBJECT(
+                          'id',
+                          MD5(DOCUMENT_TYPE.ID || '_default')::UUID,
+                          'type',
+                          DOCUMENT_TYPE.EXTRACTOR_TYPE,
+                          'fields',
+                          NATIVE_EXTRACTOR_DATA.AGGREGATED_FIELDS,
+                          'prompts',
+                          '[]'::JSONB,
+                          'compliance_policies',
+                          NATIVE_EXTRACTOR_DATA.AGGREGATED_COMPLIANCE_POLICIES
+                        )
+                      )
+                    FROM
+                      NATIVE_EXTRACTOR_DATA
+                    WHERE
+                      NATIVE_EXTRACTOR_DATA.DOCUMENT_TYPE_ID = DOCUMENT_TYPE.ID
+                  ),
+                  '[]'::JSONB
+                )
+              WHERE
+                DOCUMENT_TYPE.EXTRACTOR_TYPE IS NOT NULL
+                AND DOCUMENT_TYPE.EXTRACTOR_TYPE != 'non';
+
+              -- Step 4: Append LLM Extractor
+              WITH
+                LLM_EXTRACTOR_DATA AS (
+                  SELECT
+                    DOC.ID AS DOCUMENT_TYPE_ID,
+                    COALESCE(JSONB_AGG(FIELD) FILTER (WHERE FIELD IS NOT NULL), '[]'::JSONB) AS AGGREGATED_FIELDS,
+                    COALESCE(
+                      JSONB_AGG(
+                        (
+                          SELECT
+                            PROMPT
+                          FROM
+                            JSONB_ARRAY_ELEMENTS(DOC.PROMPTS) AS PROMPT
+                          WHERE
+                            PROMPT ->> 'code' = FIELD ->> 'code'
+                        )
+                      ) FILTER (WHERE FIELD IS NOT NULL),
+                      '[]'::JSONB
+                    ) AS AGGREGATED_PROMPTS,
+                    COALESCE(
+                      JSONB_AGG(
+                        (
+                          SELECT
+                            POLICY
+                          FROM
+                            JSONB_ARRAY_ELEMENTS(DOC.COMPLIANCE_POLICIES) AS POLICY
+                          WHERE
+                            POLICY ->> 'code' = FIELD ->> 'code'
+                        )
+                      ) FILTER (WHERE FIELD IS NOT NULL),
+                      '[]'::JSONB
+                    ) AS AGGREGATED_COMPLIANCE_POLICIES
+                  FROM
+                    DOCUMENT_TYPE DOC
+                    CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(DOC.FIELDS) AS FIELD
+                  WHERE
+                    DOC.EXTRACTOR_TYPE IS NOT NULL
+                    AND DOC.EXTRACTOR_TYPE != 'non'
+                    AND EXISTS (
+                      SELECT
+                        1
+                      FROM
+                        JSONB_ARRAY_ELEMENTS(DOC.PROMPTS) AS PROMPT
+                      WHERE
+                        PROMPT ->> 'code' = FIELD ->> 'code'
+                    )
+                  GROUP BY
+                    DOC.ID
+                )
+              UPDATE DOCUMENT_TYPE
+              SET
+                EXTRACTORS = EXTRACTORS || COALESCE(
+                  (
+                    SELECT
+                      JSONB_AGG(
+                        JSONB_BUILD_OBJECT(
+                          'id',
+                          MD5(DOCUMENT_TYPE.ID || '_llm')::UUID,
+                          'type',
+                          'llm',
+                          'fields',
+                          LLM_EXTRACTOR_DATA.AGGREGATED_FIELDS,
+                          'prompts',
+                          LLM_EXTRACTOR_DATA.AGGREGATED_PROMPTS,
+                          'compliance_policies',
+                          LLM_EXTRACTOR_DATA.AGGREGATED_COMPLIANCE_POLICIES
+                        )
+                      )
+                    FROM
+                      LLM_EXTRACTOR_DATA
+                    WHERE
+                      LLM_EXTRACTOR_DATA.DOCUMENT_TYPE_ID = DOCUMENT_TYPE.ID
+                  ),
+                  '[]'::JSONB
+                )
+              WHERE
+                EXISTS (
+                  SELECT
+                    1
+                  FROM
+                    LLM_EXTRACTOR_DATA
+                  WHERE
+                    LLM_EXTRACTOR_DATA.DOCUMENT_TYPE_ID = DOCUMENT_TYPE.ID
+                );
+
+      rollback:
+        - sql:
+            splitStatements: true
+            stripComments: true
+            sql: |
+              UPDATE DOCUMENT_TYPE
+              SET
+                FIELDS = (
+                  SELECT
+                    COALESCE(JSONB_AGG(DISTINCT FIELD), '[]'::JSONB)
+                  FROM
+                    JSONB_ARRAY_ELEMENTS(DOCUMENT_TYPE.EXTRACTORS) AS EXTRACTOR,
+                    JSONB_ARRAY_ELEMENTS(EXTRACTOR -> 'fields') AS FIELD
+                ),
+                PROMPTS = (
+                  SELECT
+                    COALESCE(JSONB_AGG(DISTINCT PROMPT), '[]'::JSONB)
+                  FROM
+                    JSONB_ARRAY_ELEMENTS(DOCUMENT_TYPE.EXTRACTORS) AS EXTRACTOR,
+                    JSONB_ARRAY_ELEMENTS(EXTRACTOR -> 'prompts') AS PROMPT
+                ),
+                COMPLIANCE_POLICIES = (
+                  SELECT
+                    COALESCE(JSONB_AGG(DISTINCT POLICY), '[]'::JSONB)
+                  FROM
+                    JSONB_ARRAY_ELEMENTS(DOCUMENT_TYPE.EXTRACTORS) AS EXTRACTOR,
+                    JSONB_ARRAY_ELEMENTS(EXTRACTOR -> 'compliance_policies') AS POLICY
+                );
+
+              UPDATE DOCUMENT_TYPE
+              SET
+                EXTRACTORS = '[]'::JSONB;
+        - sql:
+            sql: |
+              UPDATE DOCUMENT_TYPE
+              SET
+                FIELDS = '[]'::JSONB
+              WHERE
+                FIELDS IS NULL;
+
+              UPDATE DOCUMENT_TYPE
+              SET
+                PROMPTS = '[]'::JSONB
+              WHERE
+                PROMPTS IS NULL;
+        - addNotNullConstraint:
+            tableName: document_type
+            columnName: fields
+        - addNotNullConstraint:
+            tableName: document_type
+            columnName: prompts
+
+  - changeSet:
+      id: 3
+      author: Siarhei Shveadko
+      changes:
+        - sql:
+            sql: |
+              UPDATE document_type
+              SET
+                extractors = '[]'::jsonb
+              WHERE
+                extractors IS NULL;
+        - dropColumn:
+            tableName: document_type
+            columnName: fields
+        - dropColumn:
+            tableName: document_type
+            columnName: prompts
+        - dropColumn:
+            tableName: document_type
+            columnName: compliance_policies
+        - renameColumn:
+            newColumnName: extraction_type
+            oldColumnName: extractor_type
+            tableName: document_type
+        - addNotNullConstraint:
+            tableName: document_type
+            columnName: extractors
+      rollback:
+        - addColumn:
+            tableName: document_type
+            columns:              
+              - column:
+                  name: fields
+                  type: JSONB
+                  constraints:
+                    nullable: true
+              - column:
+                  name: prompts
+                  type: JSONB
+                  constraints:
+                    nullable: true
+              - column:
+                  name: compliance_policies
+                  type: JSONB
+        - renameColumn:
+            newColumnName: extractor_type
+            oldColumnName: extraction_type
+            tableName: document_type
+        - dropNotNullConstraint:
+            tableName: document_type
+            columnName: extractors
