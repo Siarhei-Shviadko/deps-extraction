@@ -1,5 +1,6 @@
 import random
 from typing import Any
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -79,6 +80,14 @@ def fake_extraction_workflow_repository(repositories):
 def fake_document_type_proxy(containers):
     with containers.external_services.document_type.override(FakeDocumentTypeProxy()) as dep:
         yield dep()
+
+
+@pytest.fixture
+def domain_event_publisher(containers):
+    mock = MagicMock()
+    with containers.domain_event_publisher.override(mock):
+        containers.reset_singletons()
+        yield mock
 
 
 @pytest.fixture(autouse=True)

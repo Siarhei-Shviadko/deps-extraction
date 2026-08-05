@@ -47,5 +47,10 @@ def extracted_data_service(application):
 
 
 @pytest.fixture
+def domain_event_publisher(containers):
+    return containers.domain_event_publisher()
+
+
+@pytest.fixture
 def extraction_workflow_repository(repositories) -> IExtractionWorkflowRepository:
     return repositories.extraction_workflow()

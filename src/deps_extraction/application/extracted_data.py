@@ -91,6 +91,7 @@ class ExtractedDataService:
         edata = self._extracted_data_repository.find(document_id)
         edata.delete_fields_by_code(field_codes)
         self._extracted_data_repository.save(edata)
+        self._publish_events(edata)
 
     def update_aliases(self, document_id: int, field_code: str, aliases: dict[str, str]) -> None:
         edata = self._extracted_data_repository.find(document_id=document_id)
