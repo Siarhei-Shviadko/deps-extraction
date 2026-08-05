@@ -4,6 +4,7 @@ import uuid
 from http import HTTPStatus
 
 import pytest
+from deps_extracted_data.model.extracted_data.field_deleted import ExtractedFieldDeleted
 from deps_extracted_data.serializers.v1 import SerializedExtractedField
 
 from deps_extraction.constants import API_PREFIX
@@ -133,17 +134,33 @@ class TestExtractedDataAPI:
         assert len(extracted_data_repository.find(document_id).fields) == initial_field_len + 1
 
     def test_delete_extracted_fields__extracted_fields_exist__successful(
-        self, client, extracted_data_factory, extracted_data_repository
+        self, client, extracted_data_factory, extracted_data_repository, mocker, domain_event_publisher
     ):
         edata = extracted_data_factory()
         extracted_data_repository.save(edata)
 
         fields_to_delete = [field.field_code for field in edata.fields]
+
+        mock_publish = mocker.patch.object(domain_event_publisher, "publish")
+
         response = client.request(
             "DELETE", f"{self.endpoint}/{edata.document_id}/fields", data=json.dumps({"fieldPks": fields_to_delete})
         )
 
         assert response.status_code == HTTPStatus.OK
+
+        mock_publish.assert_called_once()
+        publish_args = mock_publish.call_args[0]
+        assert publish_args[0] == "ExtractedData"
+        assert publish_args[1] == str(edata.document_id)
+        published_events = publish_args[2]
+        assert len(published_events) == len(fields_to_delete)
+        for field_code, actual_event in zip(fields_to_delete, published_events, strict=True):
+            assert actual_event == ExtractedFieldDeleted(
+                document_id=edata.document_id,
+                field_code=field_code,
+                deleted_at=actual_event.deleted_at,
+            )
 
     def test_delete_extracted_fields__extracted_field_doesnt_exist__no_errors(
         self, client, extracted_data_factory, extracted_data_repository
