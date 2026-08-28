@@ -34,10 +34,10 @@ class DocumentTypeRepository(IDocumentTypeRepository):
         ]
 
     def get(self, document_type_id: str) -> Optional[DocumentType]:
-        query = select(self.document_type_columns).where(document_type_table.c.id == document_type_id)
+        query = select(*self.document_type_columns).where(document_type_table.c.id == document_type_id)
 
         with self.db.connection() as conn:
-            rows = conn.execute(query).fetchone()
+            rows = conn.execute(query).mappings().fetchone()
 
         if rows:
             return DocumentTypeMapper.from_dict(rows)
@@ -45,7 +45,7 @@ class DocumentTypeRepository(IDocumentTypeRepository):
         return None
 
     def find_by_name_for_tenant(self, document_type_name: str, tenant_id: str) -> Optional[DocumentType]:
-        query = select(self.document_type_columns).where(
+        query = select(*self.document_type_columns).where(
             and_(
                 document_type_table.c.name == document_type_name,
                 document_type_table.c.tenant_id == tenant_id,
@@ -53,7 +53,7 @@ class DocumentTypeRepository(IDocumentTypeRepository):
         )
 
         with self.db.connection() as conn:
-            rows = conn.execute(query).fetchone()
+            rows = conn.execute(query).mappings().fetchone()
 
         if rows:
             return DocumentTypeMapper.from_dict(rows)
@@ -61,7 +61,7 @@ class DocumentTypeRepository(IDocumentTypeRepository):
         return None
 
     def find_by_id_for_tenant(self, document_type_id: str, tenant_id: str) -> DocumentType:
-        query = select(self.document_type_columns).where(
+        query = select(*self.document_type_columns).where(
             and_(
                 document_type_table.c.tenant_id == tenant_id,
                 document_type_table.c.id == document_type_id,
@@ -69,7 +69,7 @@ class DocumentTypeRepository(IDocumentTypeRepository):
         )
 
         with self.db.connection() as conn:
-            rows = conn.execute(query).fetchone()
+            rows = conn.execute(query).mappings().fetchone()
 
         if rows:
             return DocumentTypeMapper.from_dict(rows)
@@ -77,10 +77,10 @@ class DocumentTypeRepository(IDocumentTypeRepository):
         raise DocumentTypeNotFound(document_type_id)
 
     def find_by_tenant(self, tenant_id: str) -> list[DocumentType]:
-        query = select(self.document_type_columns).where(document_type_table.c.tenant_id == tenant_id)
+        query = select(*self.document_type_columns).where(document_type_table.c.tenant_id == tenant_id)
 
         with self.db.connection() as conn:
-            rows = conn.execute(query).fetchall()
+            rows = conn.execute(query).mappings().fetchall()
 
         return [DocumentTypeMapper.from_dict(row) for row in rows]
 
@@ -140,10 +140,10 @@ class DocumentTypeRepository(IDocumentTypeRepository):
             conn.execute(query)
 
     def find_all(self) -> list[DocumentType]:
-        query = select(self.document_type_columns)
+        query = select(*self.document_type_columns)
 
         with self.db.connection() as conn:
-            rows = conn.execute(query).fetchall()
+            rows = conn.execute(query).mappings().fetchall()
 
         return [DocumentTypeMapper.from_dict(row) for row in rows]
 

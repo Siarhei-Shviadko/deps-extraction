@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 from deps_extracted_data import FieldType, KeyValuePair
 from deps_extracted_data.model.extracted_data.data_types import EntityId
-from sqlalchemy.engine import RowProxy
+from sqlalchemy.engine import RowMapping
 
 from ..types import CommonDictType, ListOfDictsType
 from .generic_data_mapper import GenericDataMapper
@@ -36,7 +36,7 @@ class KeyValuePairMapper:
         return [kv_pair_data, key_data, value_data]
 
     @staticmethod
-    def from_dicts(raw_data: list[Union[RowProxy, CommonDictType]]) -> KeyValuePair:
+    def from_dicts(raw_data: list[Union[RowMapping, CommonDictType]]) -> KeyValuePair:
         for field in raw_data:
             index = field["index"].split(".")[-1]
             if index == "key":

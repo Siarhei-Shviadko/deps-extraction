@@ -51,21 +51,21 @@ class TenantDAO(ITenantDAO):
 
     def get_document_ids(self, conn: Connection) -> list[int]:
         res = conn.execute(
-            select([tenant_documents_table.c.document_id])
+            select(tenant_documents_table.c.document_id)
             .where(tenant_documents_table.c.tenant_id == self.current_tenant)
             .select_from(tenant_documents_table),
-        )
+        ).mappings()
 
-        return [int(row[0]) for row in res.fetchall()]
+        return [int(row["document_id"]) for row in res.fetchall()]
 
     def check_access(self, conn: Connection, document_id: int) -> None:
-        query = select([tenant_documents_table]).where(
+        query = select(tenant_documents_table).where(
             and_(
                 tenant_documents_table.c.tenant_id == self.current_tenant,
                 tenant_documents_table.c.document_id == document_id,
             ),
         )
-        if not conn.execute(query).fetchone():
+        if not conn.execute(query).mappings().fetchone():
             self._logger.debug(
                 f"Check_access failed for document_id: {document_id} and tenant_id: {self.current_tenant}.",
             )

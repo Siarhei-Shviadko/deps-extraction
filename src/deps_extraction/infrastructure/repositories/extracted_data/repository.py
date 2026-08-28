@@ -1,8 +1,8 @@
 from typing import Any, Optional
 
 from deps_extracted_data import ExtractedData
-from sqlalchemy import and_, delete, insert, or_, select, subquery
-from sqlalchemy.engine import RowProxy
+from sqlalchemy import and_, delete, insert, or_, select
+from sqlalchemy.engine import RowMapping
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.sql import Select
 
@@ -52,7 +52,7 @@ class ExtractedDataRepository(IExtractedDataRepository):  # noqa: WPS214
     def find(self, document_id: int) -> ExtractedData:
         with self._db.connection() as conn:
             query = self._get_query_for_tenant(filtering=ExtractedDataFilterObject(document_id=document_id))
-            res = conn.execute(query).fetchall()
+            res = conn.execute(query).mappings().fetchall()
             if not res:
                 raise ExtractedDataNotFound(document_id)
             return ExtractedDataMapper().from_dicts(res)
@@ -60,7 +60,7 @@ class ExtractedDataRepository(IExtractedDataRepository):  # noqa: WPS214
     def find_by_filter(self, filtering: ExtractedDataFilterObject) -> ExtractedData:
         with self._db.connection() as conn:
             query = self._get_query_for_tenant(filtering)
-            res = conn.execute(query).fetchall()
+            res = conn.execute(query).mappings().fetchall()
             if not res:
                 raise ExtractedDataNotFound(filtering.document_id)
             return ExtractedDataMapper().from_dicts(res)
@@ -83,17 +83,17 @@ class ExtractedDataRepository(IExtractedDataRepository):  # noqa: WPS214
                 extracted_field_table.c.field_code,
             )
 
-            res = conn.execute(query).fetchall()
+            res = conn.execute(query).mappings().fetchall()
 
         if not res:
             return []
 
         return ExtractedDataMapper().edata_list_from_dicts(res)
 
-    def extracted_data_exists(self, conn: Connection, document_id: int) -> RowProxy:
-        query = select([extracted_field_table.c.document_id])
+    def extracted_data_exists(self, conn: Connection, document_id: int) -> RowMapping:
+        query = select(extracted_field_table.c.document_id)
         query = self._apply_filtering(query, ExtractedDataFilterObject(document_id=document_id))
-        return conn.execute(query).fetchone()
+        return conn.execute(query).mappings().fetchone()
 
     def find_with_internal_pagination(self, document_id: int, rows_per_chunk: int) -> ExtractedData:
         edata = ExtractedData(document_id)
@@ -138,7 +138,7 @@ class ExtractedDataRepository(IExtractedDataRepository):  # noqa: WPS214
                 paginated_field_codes=field_codes,
             ),
         )
-        non_paginated_fields_res = conn.execute(non_paginated_query).fetchall()
+        non_paginated_fields_res = conn.execute(non_paginated_query).mappings().fetchall()
 
         return ExtractedDataMapper().from_dicts(non_paginated_fields_res) if non_paginated_fields_res else None
 
@@ -149,7 +149,7 @@ class ExtractedDataRepository(IExtractedDataRepository):  # noqa: WPS214
                 indexes=[PaginationFieldTypeEnum.TABLE],
             ),
         )
-        paginated_res = conn.execute(paginated_query).fetchall()
+        paginated_res = conn.execute(paginated_query).mappings().fetchall()
         return ExtractedDataMapper().from_dicts(paginated_res) if paginated_res else None
 
     def _delete_old_extracted_data(self, conn: Connection, extracted_data: ExtractedData) -> None:
@@ -168,17 +168,17 @@ class ExtractedDataRepository(IExtractedDataRepository):  # noqa: WPS214
 
     @staticmethod
     def _get_list_query(requested_select, limit: Optional[int] = None, offset: Optional[int] = None):
-        distinct_document_ids_select = subquery(
-            "distinct_document_ids",
-            [extracted_field_table.c.document_id],
-            distinct=True,
-            order_by=extracted_field_table.c.document_id,
-            limit=limit,
-            offset=offset,
+        distinct_document_ids_select = (
+            select(extracted_field_table.c.document_id)
+            .distinct()
+            .order_by(extracted_field_table.c.document_id)
+            .limit(limit)
+            .offset(offset)
+            .subquery("distinct_document_ids")
         )
 
         return (
-            select([requested_select, groups_table.c.groups])
+            select(requested_select, groups_table.c.groups)
             .select_from(
                 extracted_field_table.join(
                     groups_table,
@@ -189,7 +189,7 @@ class ExtractedDataRepository(IExtractedDataRepository):  # noqa: WPS214
         )
 
     def _get_query(self, filtering: ExtractedDataFilterObject) -> Select:
-        query = select([extracted_field_table])
+        query = select(extracted_field_table)
         query = self._apply_filtering(query, filtering)
         return query.order_by(extracted_field_table.c.field_code)
 
@@ -204,7 +204,7 @@ class ExtractedDataRepository(IExtractedDataRepository):  # noqa: WPS214
             isouter=True,
         )
         query = (
-            select([extracted_field_table, groups_table.c.groups])
+            select(extracted_field_table, groups_table.c.groups)
             .select_from(joined)
             .where(self._tenant_dao.current_tenant == tenant_documents_table.c.tenant_id)
         )

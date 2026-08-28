@@ -16,7 +16,6 @@ def session(containers):
         connection = None
 
     TrapForThreadLocalConnections.connection = connection
-    connection.begin()
     transaction = connection.begin_nested()
     database._registry = TrapForThreadLocalConnections
     try:

@@ -1,5 +1,5 @@
 from deps_extracted_data import ExtractedData, FieldType
-from sqlalchemy.engine import RowProxy
+from sqlalchemy.engine import RowMapping
 
 from deps_extraction.domain.exceptions import UnknownFieldType
 
@@ -24,11 +24,11 @@ class ExtractedDataMapper:
         groups = GroupMapper.to_dict(edata)
         return {"fields": edata_fields, "groups": groups}
 
-    def from_dicts(self, raw_edata: list[RowProxy]) -> ExtractedData:
+    def from_dicts(self, raw_edata: list[RowMapping]) -> ExtractedData:
         edata = ExtractedData(raw_edata[FIRST_ELEMENT]["document_id"])
         groups = raw_edata[FIRST_ELEMENT]["groups"]
         field_code = None
-        field_rows: list[RowProxy] = []
+        field_rows: list[RowMapping] = []
 
         for rd in raw_edata:  # noqa: WPS500
             if field_code is None:
@@ -46,9 +46,9 @@ class ExtractedDataMapper:
 
         return edata
 
-    def edata_list_from_dicts(self, edata: list[RowProxy]) -> list[ExtractedData]:
+    def edata_list_from_dicts(self, edata: list[RowMapping]) -> list[ExtractedData]:
         document_id = None
-        field_rows: list[RowProxy] = []
+        field_rows: list[RowMapping] = []
         edatas = []
         for row in edata:  # noqa: WPS500
             if document_id is None:
@@ -64,7 +64,7 @@ class ExtractedDataMapper:
         return edatas
 
     @staticmethod
-    def _add_field_to_edata(edata: ExtractedData, field_rows: list[RowProxy]) -> None:
+    def _add_field_to_edata(edata: ExtractedData, field_rows: list[RowMapping]) -> None:
         field = ExtractedFieldMapper.from_dicts(field_rows)
         field_type = field_rows[FIRST_ELEMENT]["field_type"]
         if field_type == FieldType.STRING.value:

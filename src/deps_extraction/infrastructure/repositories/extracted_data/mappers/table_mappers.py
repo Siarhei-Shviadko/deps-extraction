@@ -11,7 +11,7 @@ from deps_extracted_data import (
     TableRow,
 )
 from deps_extracted_data.model.extracted_data.data_types import EntityId
-from sqlalchemy.engine import RowProxy
+from sqlalchemy.engine import RowMapping
 
 from ..types import CommonDictType, ListOfDictsType
 from .bbox_coordinates_mappers import (
@@ -88,7 +88,7 @@ class TableMapper:
 
         return table_dicts
 
-    def from_dicts(self, raw_fields: list[Union[RowProxy, CommonDictType]]) -> Table:  # noqa: WPS231
+    def from_dicts(self, raw_fields: list[Union[RowMapping, CommonDictType]]) -> Table:  # noqa: WPS231
         cells = []
         copied_fields = deepcopy(raw_fields)
         for num, field in enumerate(copied_fields):
@@ -146,8 +146,8 @@ class TableMapper:
 
     def sort_cell_list(
         self,
-        raw_fields: list[Union[RowProxy, CommonDictType]],
-    ) -> list[Union[RowProxy, CommonDictType]]:
+        raw_fields: list[Union[RowMapping, CommonDictType]],
+    ) -> list[Union[RowMapping, CommonDictType]]:
         cell_number_index = self._get_cell_order_number_index(raw_fields)
         return sorted(raw_fields, key=lambda x: int(x["index"].split(".")[cell_number_index]))
 
@@ -160,13 +160,13 @@ class TableMapper:
             "row_span": coordinates.row_span,
         }
 
-    def _get_cell_order_number_index(self, raw_fields: list[Union[RowProxy, CommonDictType]]) -> int:
+    def _get_cell_order_number_index(self, raw_fields: list[Union[RowMapping, CommonDictType]]) -> int:
         index_item_list = self._get_cell_index_item_list(raw_fields)
         cell_anchor_index = index_item_list.index("cell")
         return cell_anchor_index + 1
 
     @staticmethod
-    def _get_cell_index_item_list(raw_fields: list[Union[RowProxy, CommonDictType]]) -> list[str]:
+    def _get_cell_index_item_list(raw_fields: list[Union[RowMapping, CommonDictType]]) -> list[str]:
         return raw_fields[FIRST_ELEMENT]["index"].split(".")
 
     @staticmethod
