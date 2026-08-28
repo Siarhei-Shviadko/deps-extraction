@@ -18,9 +18,9 @@ class ExtractionWorkflowRepository(IExtractionWorkflowRepository):
         self._db = database
 
     def get(self, id_: str) -> Optional[ExtractionWorkflow]:
-        query = select([workflow_table]).where(workflow_table.c.id == id_)
+        query = select(workflow_table).where(workflow_table.c.id == id_)
         with self._db.connection() as conn:
-            result = conn.execute(query).fetchone()
+            result = conn.execute(query).mappings().fetchone()
 
         return ExtractionWorkflowMapper.from_raw(result) if result else None
 

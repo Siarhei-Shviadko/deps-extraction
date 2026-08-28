@@ -19,7 +19,7 @@ from deps_extracted_data.serializers.v2 import (
     TableFieldChunk,
     TableFieldChunkMeta,
 )
-from sqlalchemy.engine import RowProxy
+from sqlalchemy.engine import RowMapping
 
 from deps_extraction.domain.dtos import ExtractedDataPaginationParamsObject
 from deps_extraction.domain.exceptions import ChunkedExtractedDataError
@@ -36,7 +36,7 @@ class ChunkedMapper:
     @classmethod
     def build_extracted_data_field_chunk(
         cls,
-        chunk_data: list[RowProxy],
+        chunk_data: list[RowMapping],
         edata_field: ExtractedField,
         pagination_params: ExtractedDataPaginationParamsObject,
     ) -> TableChunkResponse:

@@ -8,7 +8,7 @@ from deps_extracted_data import (
     GenericData,
 )
 from deps_extracted_data.model.extracted_data.data_types import EntityId
-from sqlalchemy.engine import RowProxy
+from sqlalchemy.engine import RowMapping
 
 from deps_extraction.domain.exceptions import (
     UnknownExtractedDataValueType,
@@ -45,7 +45,7 @@ class GenericDataMapper:
             "source_text_coordinates": SourceTextCoordinatesMapper.to_dict(data.source_text_coordinates),
         }
 
-    def from_dict(self, raw_data: Union[RowProxy, CommonDictType]) -> GenericData:
+    def from_dict(self, raw_data: Union[RowMapping, CommonDictType]) -> GenericData:
         value = self._get_value_by_type(raw_data)
         data = GenericData(
             value=value,
@@ -74,7 +74,7 @@ class GenericDataMapper:
         raise UnknownFieldType()
 
     @staticmethod
-    def _get_value_by_type(raw_data: Union[RowProxy, CommonDictType]) -> Data:
+    def _get_value_by_type(raw_data: Union[RowMapping, CommonDictType]) -> Data:
         value_type = raw_data["meta"]["value_type"]
         if value_type == ExtractedDataValueType.STRING.value:
             return raw_data["value"]

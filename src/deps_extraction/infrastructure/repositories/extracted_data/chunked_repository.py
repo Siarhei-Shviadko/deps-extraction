@@ -127,7 +127,7 @@ class ChunkedExtractedDataRepository:
         field_code: str,
         per_chunk: int,
     ) -> ExtractedField:
-        query = select([extracted_field_table])
+        query = select(extracted_field_table)
         query = self._apply_filtering(
             query,
             ExtractedDataFilterObject(
@@ -136,7 +136,7 @@ class ChunkedExtractedDataRepository:
                 indexes=[PaginationFieldTypeEnum.TABLE],
             ),
         )
-        res = connection.execute(query).fetchall()
+        res = connection.execute(query).mappings().fetchall()
         if res:
             edata_field = ExtractedFieldMapper.from_dicts(res)
             PaginatedFieldMapper.add_pagination_info_to_field(edata_field.data, per_chunk)
@@ -185,7 +185,7 @@ class ChunkedExtractedDataRepository:
         edata_field: ExtractedField,
         pagination_params: ExtractedDataPaginationParamsObject,
     ) -> TableChunkResponse:
-        query = select([extracted_field_table])
+        query = select(extracted_field_table)
         query = self._apply_filtering(
             query,
             filtering=ExtractedDataFilterObject(
@@ -197,7 +197,7 @@ class ChunkedExtractedDataRepository:
                 ),
             ),
         )
-        res = conn.execute(query).fetchall()
+        res = conn.execute(query).mappings().fetchall()
 
         return ChunkedMapper.build_extracted_data_field_chunk(
             chunk_data=res,

@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy.engine.result import RowProxy
+from sqlalchemy.engine import RowMapping
 
 from deps_extraction.domain.model import EntityId, ExtractionWorkflow
 
@@ -20,7 +20,7 @@ class ExtractionWorkflowMapper:
         }
 
     @classmethod
-    def from_raw(cls, raw_workflow: RowProxy) -> ExtractionWorkflow:
+    def from_raw(cls, raw_workflow: RowMapping) -> ExtractionWorkflow:
         return ExtractionWorkflow(
             id_=EntityId(raw_workflow["id"]),
             document_id=raw_workflow["document_id"],

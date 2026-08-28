@@ -11,7 +11,7 @@ from deps_extracted_data import (
     KeyValuePair,
     Table,
 )
-from sqlalchemy.engine import RowProxy
+from sqlalchemy.engine import RowMapping
 
 from deps_extraction.domain.exceptions import UnknownFieldType
 
@@ -51,7 +51,7 @@ class FieldDataMapper:
             return KeyValuePairMapper.to_dicts(data, index, alias)
         raise UnknownFieldType()
 
-    def from_dicts(self, raw_data: list[Union[RowProxy, CommonDictType]]) -> FieldData:
+    def from_dicts(self, raw_data: list[Union[RowMapping, CommonDictType]]) -> FieldData:
         field_type = raw_data[FIRST_ELEMENT]["field_type"]
         if field_type in {FieldType.STRING.value, FieldType.CHECKBOX.value}:
             return GenericDataMapper().from_dict(raw_data[FIRST_ELEMENT])
